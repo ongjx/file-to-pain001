@@ -26,16 +26,26 @@ public final class MultiRecordCsvPaymentFileHandler implements PaymentFileHandle
         return CsvInput.read(path, format, parser -> {
             MultiRecordPaymentAssembler assembler = new MultiRecordPaymentAssembler(clock, profile.preserveSourceBatches());
             for (var row : parser) {
-                if (row.stream().allMatch(String::isBlank)) continue;
+                if (row.stream().allMatch(String::isBlank)) {
+                    continue;
+                }
                 String type = row.get(0).strip();
                 var columns = profile.records().get(type);
                 // Unknown source tags are not echoed into diagnostics.
                 PaymentFields fields = CsvInput.positional(row, columns, columns == null ? null : type);
-                if (columns == null) throw fields.invalid("record_type", "unknown record type for selected profile");
-                if (row.size() != columns.size()) throw fields.invalid("record", "field count differs from record type");
+                if (columns == null) {
+                    throw fields.invalid("record_type", "unknown record type for selected profile");
+                }
+                if (row.size() != columns.size()) {
+                    throw fields.invalid("record", "field count differs from record type");
+                }
                 for (String field : columns) {
-                    if (type.equals("TX") && (field.equals("creditor_bic") || field.equals("remittance"))) continue;
-                    if (fields.value(field).isBlank()) throw fields.invalid(field, "required value is blank");
+                    if (!profile.isRequiredField(type, field)) {
+                        continue;
+                    }
+                    if (fields.value(field).isBlank()) {
+                        throw fields.invalid(field, "required value is blank");
+                    }
                 }
                 assembler.accept(type, fields);
             }

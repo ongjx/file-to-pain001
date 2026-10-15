@@ -38,15 +38,17 @@ public final class PaymentDocumentAssembler {
     private String initiatingParty;
     private long count;
 
-    public PaymentDocumentAssembler(Clock clock) { this.clock = clock; }
+    public PaymentDocumentAssembler(Clock clock) {
+        this.clock = clock;
+    }
 
     public PaymentInstruction30 header(PaymentFields fields) throws PaymentConversionException {
-        String party = fields.text("initiating_party_name", 140, true);
+        String party = fields.requiredText("initiating_party_name", 140);
         if (initiatingParty != null && !initiatingParty.equals(party)) {
             throw fields.invalid("initiating_party_name", "must be consistent throughout the file");
         }
         initiatingParty = party;
-        String name = fields.text("debtor_name", 140, true);
+        String name = fields.requiredText("debtor_name", 140);
         String iban = fields.iban("debtor_iban");
         String bic = fields.bic("debtor_bic");
         DebtorIdentity identity = new DebtorIdentity(name, bic);
@@ -65,8 +67,10 @@ public final class PaymentDocumentAssembler {
     }
 
     public CreditTransferTransaction34 transaction(PaymentFields fields) throws PaymentConversionException {
-        String reference = fields.text("end_to_end_id", 35, true);
-        if (!references.add(reference)) throw fields.invalid("end_to_end_id", "duplicate reference within file");
+        String reference = fields.requiredText("end_to_end_id", 35);
+        if (!references.add(reference)) {
+            throw fields.invalid("end_to_end_id", "duplicate reference within file");
+        }
         CreditTransferTransaction34 transaction = new CreditTransferTransaction34();
         PaymentIdentification6 paymentId = new PaymentIdentification6();
         paymentId.setEndToEndId(reference);
@@ -74,10 +78,12 @@ public final class PaymentDocumentAssembler {
         AmountType4Choice choice = new AmountType4Choice();
         choice.setInstdAmt(amount(fields.amount("amount"), fields.currency("currency")));
         transaction.setAmt(choice);
-        transaction.setCdtr(party(fields.text("creditor_name", 140, true)));
+        transaction.setCdtr(party(fields.requiredText("creditor_name", 140)));
         transaction.setCdtrAcct(account(fields.iban("creditor_iban")));
-        if (!fields.value("creditor_bic").isEmpty()) transaction.setCdtrAgt(agent(fields.bic("creditor_bic")));
-        String remittance = fields.text("remittance", 140, false);
+        if (!fields.value("creditor_bic").isEmpty()) {
+            transaction.setCdtrAgt(agent(fields.bic("creditor_bic")));
+        }
+        String remittance = fields.optionalText("remittance", 140);
         if (!remittance.isEmpty()) {
             RemittanceInformation16 information = new RemittanceInformation16();
             information.getUstrd().add(remittance);
@@ -111,13 +117,17 @@ public final class PaymentDocumentAssembler {
     }
 
     public Document finish() throws PaymentConversionException {
-        if (count == 0) throw new PaymentFields(Map.of(), Map.of(), 0, null).invalid("record", "CSV contains no payments");
+        if (count == 0) {
+            throw PaymentFields.invalidFile("record", "CSV contains no payments");
+        }
         GroupHeader85 header = new GroupHeader85();
         header.setMsgId(identifier());
         header.setCreDtTm(DatatypeFactory.newDefaultInstance().newXMLGregorianCalendar(clock.instant().toString()));
         header.setInitgPty(party(initiatingParty));
         header.setNbOfTxs(Long.toString(count));
-        if (currencies.size() == 1) header.setCtrlSum(total);
+        if (currencies.size() == 1) {
+            header.setCtrlSum(total);
+        }
         CustomerCreditTransferInitiationV09 message = new CustomerCreditTransferInitiationV09();
         message.setGrpHdr(header);
         message.getPmtInf().addAll(groups.values());

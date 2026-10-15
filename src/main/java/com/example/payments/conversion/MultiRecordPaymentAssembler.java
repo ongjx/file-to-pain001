@@ -53,8 +53,10 @@ public final class MultiRecordPaymentAssembler {
 
     private void header(PaymentFields fields) throws PaymentConversionException {
         closeBatch();
-        batch = fields.text("batch_id", Integer.MAX_VALUE, true);
-        if (!batchIds.add(batch)) throw fields.invalid("batch_id", "duplicate batch ID within file");
+        batch = fields.requiredText("batch_id", Integer.MAX_VALUE);
+        if (!batchIds.add(batch)) {
+            throw fields.invalid("batch_id", "duplicate batch ID within file");
+        }
         expectedTransactions = fields.count("transaction_count");
         header = assembler.header(fields);
         headerFields = fields;
@@ -62,8 +64,12 @@ public final class MultiRecordPaymentAssembler {
     }
 
     private void transaction(PaymentFields fields) throws PaymentConversionException {
-        if (header == null) throw fields.invalid("batch_id", "TX requires a preceding PH");
-        if (!fields.value("batch_id").equals(batch)) throw fields.invalid("batch_id", "must match the current PH batch");
+        if (header == null) {
+            throw fields.invalid("batch_id", "TX requires a preceding PH");
+        }
+        if (!fields.value("batch_id").equals(batch)) {
+            throw fields.invalid("batch_id", "must match the current PH batch");
+        }
         closeTransaction();
         transaction = assembler.transaction(fields);
         transactionFields = fields;
@@ -73,7 +79,9 @@ public final class MultiRecordPaymentAssembler {
     }
 
     private void requireOwner(PaymentFields fields) throws PaymentConversionException {
-        if (transaction == null) throw fields.invalid("end_to_end_id", "detail requires a preceding TX in the current batch");
+        if (transaction == null) {
+            throw fields.invalid("end_to_end_id", "detail requires a preceding TX in the current batch");
+        }
         if (!fields.value("end_to_end_id").equals(transaction.getPmtId().getEndToEndId())) {
             throw fields.invalid("end_to_end_id", "must match the current TX");
         }
@@ -81,8 +89,10 @@ public final class MultiRecordPaymentAssembler {
 
     private void invoice(PaymentFields fields) throws PaymentConversionException {
         requireOwner(fields);
-        String id = fields.text("invoice_id", 35, true);
-        if (!invoiceIds.add(id)) throw fields.invalid("invoice_id", "duplicate invoice ID within payment");
+        String id = fields.requiredText("invoice_id", 35);
+        if (!invoiceIds.add(id)) {
+            throw fields.invalid("invoice_id", "duplicate invoice ID within payment");
+        }
         String currency = fields.currency("currency");
         if (!currency.equals(transaction.getAmt().getInstdAmt().getCcy())) {
             throw fields.invalid("currency", "invoice currency must match the current TX");
@@ -96,14 +106,18 @@ public final class MultiRecordPaymentAssembler {
         StructuredRemittanceInformation16 structured = new StructuredRemittanceInformation16();
         structured.getRfrdDocInf().add(document);
         structured.setRfrdDocAmt(remitted);
-        if (transaction.getRmtInf() == null) transaction.setRmtInf(new RemittanceInformation16());
+        if (transaction.getRmtInf() == null) {
+            transaction.setRmtInf(new RemittanceInformation16());
+        }
         transaction.getRmtInf().getStrd().add(structured);
         invoiceSum = invoiceSum.add(amount);
     }
 
     private void exchange(PaymentFields fields) throws PaymentConversionException {
         requireOwner(fields);
-        if (transaction.getXchgRateInf() != null) throw fields.invalid("record", "duplicate FX record for payment");
+        if (transaction.getXchgRateInf() != null) {
+            throw fields.invalid("record", "duplicate FX record for payment");
+        }
         String source = fields.currency("source_currency");
         String target = fields.currency("target_currency");
         if (!target.equals(transaction.getAmt().getInstdAmt().getCcy()) || source.equals(target)) {
@@ -117,12 +131,14 @@ public final class MultiRecordPaymentAssembler {
         ExchangeRate1 exchange = new ExchangeRate1();
         exchange.setUnitCcy(source);
         exchange.setXchgRate(rate);
-        exchange.setCtrctId(fields.text("contract_id", 35, true));
+        exchange.setCtrctId(fields.requiredText("contract_id", 35));
         transaction.setXchgRateInf(exchange);
     }
 
     private void closeTransaction() throws PaymentConversionException {
-        if (transaction == null) return;
+        if (transaction == null) {
+            return;
+        }
         if (!invoiceIds.isEmpty() && invoiceSum.compareTo(transaction.getAmt().getInstdAmt().getValue()) != 0) {
             throw transactionFields.invalid("amount", "invoice amounts must sum exactly to the TX amount");
         }
@@ -132,8 +148,12 @@ public final class MultiRecordPaymentAssembler {
 
     private void closeBatch() throws PaymentConversionException {
         closeTransaction();
-        if (header == null) return;
-        if (!actualTransactions.equals(expectedTransactions)) throw headerFields.invalid("transaction_count", "declared count must equal actual TX count; batches cannot be empty");
+        if (header == null) {
+            return;
+        }
+        if (!actualTransactions.equals(expectedTransactions)) {
+            throw headerFields.invalid("transaction_count", "declared count must equal actual TX count; batches cannot be empty");
+        }
         header = null;
     }
 }

@@ -30,6 +30,14 @@ The implementation SHALL retain a small `PaymentFileHandler` interface that read
 - **WHEN** the multi-record handler reads a structurally valid PH, TX, IN or FX record
 - **THEN** its conversion-layer assembler applies ownership, mapping and reconciliation rules, preserving generated-model values, validation ordering and source diagnostics
 
+#### Scenario: Required-field policy is shared without changing contracts
+- **WHEN** flat or multi-record CSV handlers validate required columns and values
+- **THEN** the profile's shared field policy treats creditor BIC and remittance as optional for flat payment rows and TX records, keeps PH/IN/FX fields mandatory, and preserves existing validation ordering and diagnostics
+
+#### Scenario: Legacy layout selection remains consistent
+- **WHEN** the Java facade or CLI receives the same supported legacy layout
+- **THEN** both use the registry's layout-to-profile mapping and select the corresponding versioned flat profile
+
 ### Requirement: Payment rules and document assembly are shared across handlers
 Common payment-value checks, duplicate references, party consistency, identifiers, clocks, grouping, actual counts, and exact totals SHALL have one shared implementation used by both handlers. Source syntax SHALL remain with the relevant handler; profile-specific ownership and reconciliation SHALL reside in its per-conversion assembler. Mapping and shared assembly SHALL populate the existing generated model directly without introducing an intermediate canonical payment model or JSON representation. The existing XML writer SHALL remain responsible for serialization and XSD validation. Mutable documents, parsing state, and marshallers SHALL remain local to each conversion.
 

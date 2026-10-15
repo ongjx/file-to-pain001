@@ -87,6 +87,12 @@ The flat handler owns header lookup and row parsing. The multi-record handler ow
 
 Extract `PaymentDocumentAssembler` and small shared value-validation helpers from the current flat handler. Both handlers use that implementation for common payment rules, duplicate references across the entire file, party consistency, generated IDs, injected clock, grouping, actual counts, and exact totals. Pass generated payment objects and minimal source/group context internally; do not create a parallel canonical payment hierarchy. The handler still returns a complete generated `Document` through the existing interface. Source record/type/field context must survive shared validation so diagnostics remain useful and sanitized.
 
+The October 16 simplification keeps required/optional source-field policy in `PaymentInputProfile`: flat payment rows and TX records share the optional creditor BIC/remittance definition; PH/IN/FX fields remain mandatory. Both CSV handlers consult that policy and legacy `CsvLayout.requiredHeaders()` uses the same optional-field definition. The registry owns legacy layout-to-profile conversion through `forLayout`, used by both the facade and runner.
+
+`PaymentFields.requiredText` and `optionalText` make text validation intent explicit, while the existing boolean-based method remains compatible. A named XML-character predicate retains the same XML 1.0 limits. File-level errors use `PaymentFields.invalidFile`, sharing the same diagnostic formatting as record-level errors without constructing dummy field maps. Validation order and public diagnostic messages remain unchanged.
+
+The public layout-based handler constructor and `CsvLayout.requiredHeaders()` have no repository call sites, but remain documented compatibility APIs because external usage cannot be excluded. No public APIs are removed in this pass. Maven configuration formatting changes whitespace only.
+
 The registry and profile definitions may be reused if immutable. Each conversion must create fresh parsers, handler state, assembler state, generated objects, and marshaller. Different profiles must remain safe to process concurrently through the same converter.
 
 Both Shade executions inherit one common configuration for dependency inclusion, signature/module exclusions, JAXB service-provider resources and license/notice merging. Execution-specific configuration retains the classifier and manifest: only the runner declares a CLI Main-Class; both retain multi-release metadata.

@@ -46,7 +46,7 @@ public final class PaymentFileConverter {
         if (path == null || layout == null) {
             throw new PaymentConversionException(PaymentConversionException.Kind.USAGE, "A file path and CSV layout are required.");
         }
-        return convert(path, layout == CsvLayout.DEFAULT ? "flat-default-v1" : "flat-camel-case-v1");
+        return convert(path, PaymentProfileRegistry.forLayout(layout).id());
     }
 
     public Document convert(Path path, String profileId) throws PaymentConversionException {

@@ -22,26 +22,58 @@ public final class PaymentFields {
 
     public String value(String field) { return values.getOrDefault(field, "").strip(); }
 
-    public PaymentConversionException invalid(String field, String reason) {
-        return new PaymentConversionException(PaymentConversionException.Kind.VALIDATION,
-                (record == 0 ? "CSV" : "CSV record " + record) + (type == null ? "" : " (" + type + ")")
-                + ", field " + names.getOrDefault(field, field) + ": " + reason + ".");
+    public static PaymentConversionException invalidFile(String field, String reason) {
+        return invalidAt("CSV", field, reason);
     }
 
+    public PaymentConversionException invalid(String field, String reason) {
+        String location = record == 0 ? "CSV" : "CSV record " + record;
+        if (type != null) {
+            location += " (" + type + ")";
+        }
+        return invalidAt(location, names.getOrDefault(field, field), reason);
+    }
+
+    private static PaymentConversionException invalidAt(String location, String field, String reason) {
+        return new PaymentConversionException(PaymentConversionException.Kind.VALIDATION,
+                location + ", field " + field + ": " + reason + ".");
+    }
+
+    public String requiredText(String field, int max) throws PaymentConversionException {
+        return text(field, max, true);
+    }
+
+    public String optionalText(String field, int max) throws PaymentConversionException {
+        return text(field, max, false);
+    }
+
+    /** Compatibility API; named requiredText/optionalText methods make new call sites clearer. */
     public String text(String field, int max, boolean required) throws PaymentConversionException {
         String value = value(field);
-        if (required && value.isBlank()) throw invalid(field, "required value is blank");
-        if (value.codePointCount(0, value.length()) > max) throw invalid(field, "exceeds schema maximum length " + max);
-        if (value.codePoints().anyMatch(c -> !(c == 9 || c == 10 || c == 13 || c >= 0x20 && c <= 0xD7FF
-                || c >= 0xE000 && c <= 0xFFFD || c >= 0x10000 && c <= 0x10FFFF))) {
+        if (required && value.isBlank()) {
+            throw invalid(field, "required value is blank");
+        }
+        if (value.codePointCount(0, value.length()) > max) {
+            throw invalid(field, "exceeds schema maximum length " + max);
+        }
+        if (value.codePoints().anyMatch(codePoint -> !isXmlCharacter(codePoint))) {
             throw invalid(field, "contains a character forbidden in XML 1.0");
         }
         return value;
     }
 
+    private static boolean isXmlCharacter(int codePoint) {
+        return codePoint == 9 || codePoint == 10 || codePoint == 13
+                || codePoint >= 0x20 && codePoint <= 0xD7FF
+                || codePoint >= 0xE000 && codePoint <= 0xFFFD
+                || codePoint >= 0x10000 && codePoint <= 0x10FFFF;
+    }
+
     private String pattern(String field, String regex, String reason) throws PaymentConversionException {
         String value = value(field);
-        if (!value.matches(regex)) throw invalid(field, reason);
+        if (!value.matches(regex)) {
+            throw invalid(field, reason);
+        }
         return value;
     }
 
@@ -86,7 +118,9 @@ public final class PaymentFields {
     public java.math.BigInteger count(String field) throws PaymentConversionException {
         String value = pattern(field, "[0-9]+", "expected a positive base-10 integer");
         var count = new java.math.BigInteger(value);
-        if (count.signum() <= 0) throw invalid(field, "expected a positive base-10 integer");
+        if (count.signum() <= 0) {
+            throw invalid(field, "expected a positive base-10 integer");
+        }
         return count;
     }
 }

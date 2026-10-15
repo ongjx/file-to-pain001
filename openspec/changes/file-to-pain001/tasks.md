@@ -88,3 +88,14 @@ Sections 1–6 describe the implemented flat-file baseline. Sections 7–10 are 
 - [x] 13.3 Document the implemented Maven/package responsibilities, update profile/design/packaging requirements, and preserve existing public APIs, tests and pre-existing working changes.
 - [x] 13.4 Compare moved mapping/validation methods against the pre-refactor working files and run a clean Java 21 verification with the installed vendor API: 229 passed, zero failures/errors, one optional installed-Xerces test skipped because `webmethods.xerces.jar` was not supplied. Pass the six-sample checker, mapping/wrong-layout checks and flat control; see `docs/verification.md`.
 - [x] 13.5 Validate the updated OpenSpec change with `openspec validate file-to-pain001 --strict --no-interactive --json` (passed with no issues) and run `git diff --check` (passed).
+
+
+## 14. Shared field rules and readability cleanup — 2026-10-16
+
+- [x] 14.1 Centralize optional transaction fields and required-field policy in `PaymentInputProfile`, reusing it in both handlers and the legacy layout inspection API without changing validation ordering.
+- [x] 14.2 Centralize legacy layout-to-profile selection in `PaymentProfileRegistry.forLayout` and reuse it in the converter and CLI.
+- [x] 14.3 Inspect unused compatibility candidates; retain the public layout-based handler constructor and `CsvLayout.requiredHeaders()` with explicit compatibility documentation because external usage cannot be ruled out. Remove their duplicated optional-field definition rather than public entry points.
+- [x] 14.4 Use named required/optional text validation methods, retain the boolean-based public method, extract the XML-character predicate and expand compressed guard clauses.
+- [x] 14.5 Introduce a file-level validation-error factory and remove dummy `PaymentFields` allocations while preserving diagnostic text.
+- [x] 14.6 Format the POM consistently and compare its parsed XML elements, attributes and values with the pre-format version to confirm configuration equivalence.
+- [x] 14.7 Pass clean Java 21 verification with the installed vendor API (229 passed, zero failures/errors, one optional installed-Xerces check skipped), all six standalone fixture/mapping checks and flat/wrong-layout controls, strict OpenSpec validation and `git diff --check`. Existing tests and unrelated research notes remain unchanged.

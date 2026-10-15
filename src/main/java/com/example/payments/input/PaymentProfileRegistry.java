@@ -25,6 +25,13 @@ public final class PaymentProfileRegistry {
     private static final Map<String, PaymentInputProfile> PROFILES = Map.of(
             DEFAULT, FLAT, "default", FLAT, CAMEL.id(), CAMEL, "camel-case", CAMEL, MULTI.id(), MULTI);
     private PaymentProfileRegistry() { }
+    public static PaymentInputProfile forLayout(CsvLayout layout) {
+        return switch (layout) {
+            case DEFAULT -> FLAT;
+            case CAMEL_CASE -> CAMEL;
+        };
+    }
+
     public static PaymentInputProfile resolve(String id) throws PaymentConversionException {
         PaymentInputProfile profile = id == null ? null : PROFILES.get(id);
         if (profile == null) throw new PaymentConversionException(PaymentConversionException.Kind.USAGE,
@@ -33,7 +40,9 @@ public final class PaymentProfileRegistry {
     }
     public static PaymentFileHandler handler(PaymentInputProfile profile, Path path, Clock clock)
             throws PaymentConversionException {
-        if (path == null) throw new PaymentConversionException(PaymentConversionException.Kind.USAGE, "A file path is required.");
+        if (path == null) {
+            throw new PaymentConversionException(PaymentConversionException.Kind.USAGE, "A file path is required.");
+        }
         String name = path.getFileName() == null ? "" : path.getFileName().toString();
         int dot = name.lastIndexOf('.');
         String extension = dot < 0 ? "" : name.substring(dot + 1).toLowerCase(Locale.ROOT);

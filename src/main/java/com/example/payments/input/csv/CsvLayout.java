@@ -1,6 +1,7 @@
 package com.example.payments.input.csv;
 
 import com.example.payments.conversion.PaymentConversionException;
+import com.example.payments.input.PaymentInputProfile;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -8,7 +9,6 @@ import java.util.stream.Collectors;
 public enum CsvLayout {
     DEFAULT("default"), CAMEL_CASE("camel-case");
 
-    private static final Set<String> OPTIONAL = Set.of("creditor_bic", "remittance");
     private static final String[] FIELDS = {
         "initiating_party_name", "debtor_name", "debtor_iban", "debtor_bic", "execution_date",
         "end_to_end_id", "creditor_name", "creditor_iban", "creditor_bic", "amount", "currency", "remittance"
@@ -35,8 +35,9 @@ public enum CsvLayout {
         return Arrays.stream(FIELDS).map(this::header).collect(Collectors.toUnmodifiableSet());
     }
 
+    /** Compatibility API for callers inspecting a legacy flat layout. */
     public Set<String> requiredHeaders() {
-        return Arrays.stream(FIELDS).filter(f -> !OPTIONAL.contains(f))
+        return Arrays.stream(FIELDS).filter(f -> !PaymentInputProfile.isOptionalTransactionField(f))
                 .map(this::header).collect(Collectors.toUnmodifiableSet());
     }
 

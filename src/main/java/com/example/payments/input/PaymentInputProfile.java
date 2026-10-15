@@ -9,6 +9,20 @@ import java.util.stream.Collectors;
 /** Immutable contract; initial profiles use strict ISO dates and dot decimals. */
 public record PaymentInputProfile(String id, Structure structure, Set<String> extensions,
         Map<String, String> headers, Map<String, List<String>> records, boolean preserveSourceBatches) {
+    private static final Set<String> OPTIONAL_TRANSACTION_FIELDS = Set.of("creditor_bic", "remittance");
+
+    public static boolean isOptionalTransactionField(String field) {
+        return OPTIONAL_TRANSACTION_FIELDS.contains(field);
+    }
+
+    public boolean isRequiredField(String field) {
+        return !isOptionalTransactionField(field);
+    }
+
+    public boolean isRequiredField(String recordType, String field) {
+        return !"TX".equals(recordType) || isRequiredField(field);
+    }
+
     public enum Structure { FLAT_CSV, MULTIRECORD_CSV }
     public PaymentInputProfile {
         extensions = Set.copyOf(extensions);

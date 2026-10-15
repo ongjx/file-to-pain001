@@ -25,6 +25,14 @@ checks record tags, per-type widths and required columns, then passes records to
 `MultiRecordPaymentAssembler` for PH/TX state, detail ownership, counts and reconciliation.
 `CsvInput` shares CSV transport, BOM handling and sanitized parser diagnostics.
 
+`PaymentInputProfile` holds the shared optional transaction-field definition and
+required-field policy. Flat payment rows and TX records allow blank creditor BIC
+and remittance; PH/IN/FX fields remain mandatory. Both handlers consult this policy,
+and legacy layout header inspection uses the same optional-field definition.
+`PaymentProfileRegistry.forLayout` owns the compatibility layout-to-profile mapping
+used by the facade and CLI. Public legacy entry points remain available.
+
+
 `PaymentFields` shares strict value checks and carries logical record/type/field
 context, including flat header aliases. `PaymentDocumentAssembler` maps common
 payment fields into generated objects and owns file-wide consistency, duplicate

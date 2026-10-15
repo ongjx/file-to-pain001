@@ -228,3 +228,23 @@ skipped because `webmethods.xerces.jar` was not supplied. Existing tests were no
 modified. The standalone multi-record sample checker also passed all six core
 samples, mapping checks, wrong-layout rejection and the flat positive control.
 `git diff --check` passed. No deployment was performed.
+
+
+## Shared field rules and readability cleanup — 2026-10-16
+
+Centralized optional transaction-field policy and legacy layout-to-profile lookup;
+added named required/optional text validation and an XML-character predicate;
+replaced dummy field objects with a file-level diagnostic factory; expanded guard
+clauses and formatted the POM. A parsed XML comparison confirmed that POM element
+names, attributes and values were unchanged. Public legacy layout inspection,
+handler construction and boolean-based text validation remain compatible because
+external usage cannot be excluded. No public entry points were deleted.
+
+Unit tests passed after each logical extraction. Final verification used the
+project's Java 21 installation and `mvn -q clean verify` with
+`-Dwebmethods.client.jar=/Applications/wMServiceDesigner/common/lib/wm-isclient.jar`:
+229 passed, zero failures/errors, one optional server-Xerces test skipped because
+`webmethods.xerces.jar` was not supplied. Existing tests were unchanged. The
+standalone sample checker passed six core fixtures with payment/detail mapping,
+wrong-layout rejection and flat positive control. Strict OpenSpec validation and
+`git diff --check` passed. No deployment was performed.

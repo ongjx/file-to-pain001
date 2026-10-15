@@ -80,7 +80,7 @@ public final class PaymentFileRunner {
                     if (selectorSeen) {
                         throw usage();
                     }
-                    profile = CsvLayout.fromOption(args[i + 1]) == CsvLayout.DEFAULT ? "flat-default-v1" : "flat-camel-case-v1";
+                    profile = PaymentProfileRegistry.forLayout(CsvLayout.fromOption(args[i + 1])).id();
                     selectorSeen = true;
                 }
                 case "--profile" -> {
