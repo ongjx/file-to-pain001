@@ -2,6 +2,8 @@
 
 A Java 21/JAXB 4 library that converts supported CSV payment files into validated ISO 20022 `pain.001.001.09` XML. A webMethods Java service calls the library directly with an input file path and receives an XML string.
 
+Project proposals, specifications, and implementation tasks are tracked in [OpenSpec](openspec/changes/file-to-pain001/proposal.md) inside this repository.
+
 ```text
 FLOW inputPath -> Java service -> PaymentFileConverter.convertToXml(inputPath)
                              <- validated XML String
