@@ -4,6 +4,8 @@ A Java 21/JAXB 4 library that converts supported flat and multi-record CSV payme
 
 Project proposals, specifications, and implementation tasks are tracked in [OpenSpec](openspec/changes/file-to-pain001/proposal.md) inside this repository.
 
+See [payment transformation research](docs/payment-transformation-research.md) for mapping assurance, custom Java versus specialist products, banking adoption evidence, and webMethods/Spring Boot deployment options, with sources and project recommendations.
+
 ```text
 FLOW inputPath, optional profileId -> Java service -> PaymentFileConverter.convertToXml(inputPath[, profileId])
                              <- validated XML String
