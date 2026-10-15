@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Maven library and runnable application
-The project SHALL target Java 21 and JAXB 4, producing a reusable library JAR with runtime dependencies available for webMethods and a dependency-inclusive executable runner JAR for local use. The primary library facade SHALL retain `convertToXml(String inputPath)` and add `convertToXml(String inputPath, String profileId)`, both returning validated XML as a `String`. Lower-level model conversion SHALL retain existing overloads and add explicit profile selection without webMethods dependencies or process termination. Java 17 SHALL be treated only as an explicitly selected, separately verified fallback target if deployment requires it.
+The project SHALL target Java 21 and JAXB 4, producing a dependency-inclusive `webmethods` classifier library JAR as the preferred server deployment, an optional thin library with separate runtime dependencies, and a dependency-inclusive executable `runner` classifier JAR for local use. The webMethods fat JAR SHALL contain the application, generated model, bundled schema and all transitive runtime dependencies, preserve JAXB service-provider resources, omit vendor platform classes, and have no CLI Main-Class. The primary library facade SHALL retain `convertToXml(String inputPath)` and add `convertToXml(String inputPath, String profileId)`, both returning validated XML as a `String`. Lower-level model conversion SHALL retain existing overloads and add explicit profile selection without webMethods dependencies or process termination. Java 17 SHALL be treated only as an explicitly selected, separately verified fallback target if deployment requires it.
 
 #### Scenario: Java service caller obtains XML
 - **WHEN** a Java 21 caller invokes `PaymentFileConverter.convertToXml(String inputPath)` on a converter instance with a valid default-layout CSV path
@@ -18,6 +18,14 @@ The project SHALL target Java 21 and JAXB 4, producing a reusable library JAR wi
 #### Scenario: Packaged application runs independently
 - **WHEN** the packaged runner is launched from outside the project directory with an absolute CSV path
 - **THEN** it resolves its dependencies and schema from the packaged runtime and completes conversion
+
+#### Scenario: Server library has no separate runtime dependencies
+- **WHEN** every valid flat and multi-record fixture is converted in an isolated classloader containing only the `-webmethods.jar` fat library and Java platform classes
+- **THEN** conversion succeeds with preserved payment/detail values and independently schema-valid XML, without Maven's dependency classpath or the runner JAR
+
+#### Scenario: Shared packaging configuration preserves artifact roles
+- **WHEN** Maven packages the webMethods library and executable runner using their shared Shade configuration
+- **THEN** both retain runtime dependencies, JAXB service-provider metadata and multi-release metadata, while only the runner declares a CLI Main-Class
 
 #### Scenario: Supported build baseline
 - **WHEN** `mvn clean verify` is run with the selected Java 21 build JDK

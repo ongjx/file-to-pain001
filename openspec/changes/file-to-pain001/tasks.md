@@ -37,33 +37,54 @@
 - [x] 6.2 Document the FLOW invocation, server-accessible paths, Java 21 JVM check, package/Designer dependency setup, and JAXB classloading considerations.
 - [x] 6.3 Review the adapter against platform API conventions and clearly distinguish tested library behavior from live Integration Server checks requiring deployment access.
 
-## 7. Shared payment rules and input profiles (pending extension)
+## 7. Shared payment rules and input profiles (implemented extension)
 
-Completed sections 1–6 describe the implemented flat-file baseline. Sections 7–10 are new implementation work; the existing six multi-record samples currently remain unsupported by the converter.
+Sections 1–6 describe the implemented flat-file baseline. Sections 7–10 are the implemented profile/multi-record extension. All six core samples now convert with their selected profile. Verification: 205 tests passed on Java 21, including the installed vendor-API adapter test; the updated sample checker passed. See `docs/verification.md` for evidence and the live-server limit.
 
-- [ ] 7.1 Extract shared payment-value validation and `PaymentDocumentAssembler` from the flat handler, retaining generated-model population, flat grouping, exact totals, common file checks, and source diagnostics under existing regression tests.
-- [ ] 7.2 Add immutable versioned profile definitions and a registry for `flat-default-v1`, `flat-camel-case-v1`, and `mock-multirecord-v1`; keep shared structural handlers and explicit field/value conventions without a mapping language or plugin loader.
-- [ ] 7.3 Add profile-aware string-to-XML and path-to-model overloads; preserve existing overloads and default/layout aliases; reject unknown/null/blank explicit profiles and incompatible extensions without inference or fallback.
+- [x] 7.1 Extract shared payment-value validation and `PaymentDocumentAssembler` from the flat handler, retaining generated-model population, flat grouping, exact totals, common file checks, and source diagnostics under existing regression tests.
+- [x] 7.2 Add immutable versioned profile definitions and a registry for `flat-default-v1`, `flat-camel-case-v1`, and `mock-multirecord-v1`; keep shared structural handlers and explicit field/value conventions without a mapping language or plugin loader.
+- [x] 7.3 Add profile-aware string-to-XML and path-to-model overloads; preserve existing overloads and default/layout aliases; reject unknown/null/blank explicit profiles and incompatible extensions without inference or fallback.
 
 ## 8. Mock multi-record CSV handler and mappings
 
-- [ ] 8.1 Implement Commons CSV parsing without header inference and enforce PH/TX/IN/FX widths, required values, blank-record handling, UTF-8/BOM, LF/CRLF, quoting, Unicode, and multiline content.
-- [ ] 8.2 Implement PH/TX state, source ownership, unique batches and file-wide payment references, invoice uniqueness per TX, at most one FX per TX, positive declared counts, and transaction/batch closing checks including end of file.
-- [ ] 8.3 Map PH/TX into generated objects via shared assembly, preserve separate source batches in grouping, split mixed-currency batches, and count/sum only TX instructed amounts.
-- [ ] 8.4 Map each IN to its own structured remittance entry retaining invoice ID/date/amount/currency and TX unstructured remittance; validate exact mock-profile invoice reconciliation.
-- [ ] 8.5 Map FX unit currency/rate/contract with explicit target-per-source rate direction, retain instructed target amount, validate source amount/currency/exact arithmetic, and document reconciliation-only fields without inferred rate type or FX dealing.
+- [x] 8.1 Implement Commons CSV parsing without header inference and enforce PH/TX/IN/FX widths, required values, blank-record handling, UTF-8/BOM, LF/CRLF, quoting, Unicode, and multiline content.
+- [x] 8.2 Implement PH/TX state, source ownership, unique batches and file-wide payment references, invoice uniqueness per TX, at most one FX per TX, positive declared counts, and transaction/batch closing checks including end of file.
+- [x] 8.3 Map PH/TX into generated objects via shared assembly, preserve separate source batches in grouping, split mixed-currency batches, and count/sum only TX instructed amounts.
+- [x] 8.4 Map each IN to its own structured remittance entry retaining invoice ID/date/amount/currency and TX unstructured remittance; validate exact mock-profile invoice reconciliation.
+- [x] 8.5 Map FX unit currency/rate/contract with explicit target-per-source rate direction, retain instructed target amount, validate source amount/currency/exact arithmetic, and document reconciliation-only fields without inferred rate type or FX dealing.
 
 ## 9. Runner and webMethods profile selection
 
-- [ ] 9.1 Add `--profile`, retain legacy `--layout`, reject duplicate/mixed selectors, update usage and status diagnostics, and preserve all output/path protections.
-- [ ] 9.2 Extend the adapter example with optional string `profileId`, validate present invalid values without fallback, and clear stale XML before profile validation while retaining cursor/exception handling.
-- [ ] 9.3 Update library/runner/profile onboarding and webMethods guides with exact profile IDs, mappings, commands, pipeline behavior, and limited mock-versus-client scope.
+- [x] 9.1 Add `--profile`, retain legacy `--layout`, reject duplicate/mixed selectors, update usage and status diagnostics, and preserve all output/path protections.
+- [x] 9.2 Extend the adapter example with optional string `profileId`, validate present invalid values without fallback, and clear stale XML before profile validation while retaining cursor/exception handling.
+- [x] 9.3 Update library/runner/profile onboarding and webMethods guides with exact profile IDs, mappings, commands, pipeline behavior, and limited mock-versus-client scope.
 
 ## 10. Multi-record acceptance and regression verification
 
-- [ ] 10.1 Test all six existing multi-record samples through library and packaged runner using `mock-multirecord-v1`; independently validate XML and assert individual invoice/FX fields, instructed amounts, counts, currency groups, and exact totals.
-- [ ] 10.2 Add focused valid cases for matching PH grouping values across distinct batches and mixed currencies inside one batch; prove no merging or detail double counting.
-- [ ] 10.3 Add focused rejection fixtures for ordering/ownership, unknown tags, widths, required values, empty batches/files, count mismatches including EOF, duplicate identifiers/details, invoice currency/sum, and FX currency/rate/arithmetic errors.
-- [ ] 10.4 Test profile defaults/aliases, unknown or blank IDs, wrong-profile rejection, profile/layout conflicts, common invalid values through both handlers, and concurrent mixed-profile use of one converter.
-- [ ] 10.5 Update `check_samples.py` and fixture guides from old rejection-only evidence to selected-profile success and mapping checks while retaining wrong-profile rejection, input immutability, and no partial output assertions.
-- [ ] 10.6 Run `mvn clean verify` and the updated sample checker on Java 21, retain all flat regression coverage, and record actual extension results separately from historical baseline evidence and pending live server checks.
+- [x] 10.1 Test all six existing multi-record samples through library and packaged runner using `mock-multirecord-v1`; independently validate XML and assert individual invoice/FX fields, instructed amounts, counts, currency groups, and exact totals.
+- [x] 10.2 Add focused valid cases for matching PH grouping values across distinct batches and mixed currencies inside one batch; prove no merging or detail double counting.
+- [x] 10.3 Add focused rejection fixtures for ordering/ownership, unknown tags, widths, required values, empty batches/files, count mismatches including EOF, duplicate identifiers/details, invoice currency/sum, and FX currency/rate/arithmetic errors.
+- [x] 10.4 Test profile defaults/aliases, unknown or blank IDs, wrong-profile rejection, profile/layout conflicts, common invalid values through both handlers, and concurrent mixed-profile use of one converter.
+- [x] 10.5 Update `check_samples.py` and fixture guides from old rejection-only evidence to selected-profile success and mapping checks while retaining wrong-profile rejection, input immutability, and no partial output assertions.
+- [x] 10.6 Run `mvn clean verify` and the updated sample checker on Java 21, retain all flat regression coverage, and record actual extension results separately from historical baseline evidence and pending live server checks.
+
+## 11. Single-JAR webMethods deployment
+
+- [x] 11.1 Add a dedicated `webmethods` classifier fat library containing the application, generated model, schema and all runtime dependencies, preserving service providers without a CLI Main-Class or vendor platform classes.
+- [x] 11.2 Retain the optional thin distribution and separate runner, and update the specs and guides to prefer only the webMethods fat JAR with migration/classloader guidance.
+- [x] 11.3 Verify every valid fixture through the isolated single-JAR interface, compile/invoke the adapter with only the fat JAR and vendor API, and run a clean Java 21 build with all 228 tests passing.
+
+## 12. Host XML-provider compatibility
+
+- [x] 12.1 Reproduce schema initialization failure with the installed server Xerces and add portable/installed-provider regressions that fail against the old artifact.
+- [x] 12.2 Select Java's built-in schema factory directly, retaining secure processing, external-resource restrictions and XSD validation without changing host-wide provider settings.
+- [x] 12.3 Pass a clean 230-test run and the original server-JVM reproduction; rebuild and update the local package fat JAR with a backup, documenting the required package reload and unverified live FLOW retry.
+
+
+## 13. Behavior-preserving simplification and structure cleanup
+
+- [x] 13.1 Extract PH/TX/IN/FX state, ownership, generated-model detail mapping and reconciliation into `conversion/MultiRecordPaymentAssembler`, retaining CSV tag/width/required-column checks in the handler and preserving validation order and diagnostics.
+- [x] 13.2 Consolidate common Shade settings for both fat JARs while retaining separate classifiers/manifests, JAXB provider resources and the runner-only CLI Main-Class.
+- [x] 13.3 Document the implemented Maven/package responsibilities, update profile/design/packaging requirements, and preserve existing public APIs, tests and pre-existing working changes.
+- [x] 13.4 Compare moved mapping/validation methods against the pre-refactor working files and run a clean Java 21 verification with the installed vendor API: 229 passed, zero failures/errors, one optional installed-Xerces test skipped because `webmethods.xerces.jar` was not supplied. Pass the six-sample checker, mapping/wrong-layout checks and flat control; see `docs/verification.md`.
+- [x] 13.5 Validate the updated OpenSpec change with `openspec validate file-to-pain001 --strict --no-interactive --json` (passed with no issues) and run `git diff --check` (passed).

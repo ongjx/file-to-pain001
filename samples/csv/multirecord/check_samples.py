@@ -1,4 +1,4 @@
-"""Validate synthetic fixtures, then record current converter compatibility."""
+"""Check mock fixtures, selected-profile XML mappings, and wrong-profile rejection."""
 import argparse
 import csv
 from datetime import date
@@ -81,6 +81,72 @@ def inspect_fixture(path, expected):
     return {"record_counts": counts, "payment_totals": {k: str(v) for k, v in totals.items()}, "sha256": hashlib.sha256(raw).hexdigest()}
 
 
+def inspect_xml(path, xml, expected):
+    root = ET.fromstring(xml)
+    ns = {"p": "urn:iso:std:iso:20022:tech:xsd:pain.001.001.09"}
+    def text(node, query):
+        return node.findtext(query, default="", namespaces=ns)
+    def equal(actual, wanted, description):
+        require(actual == wanted, f"XML mismatch: {description}")
+    groups = root.findall(".//p:PmtInf", ns)
+    actual = {}
+    for group in groups:
+        transactions = group.findall("p:CdtTrfTxInf", ns)
+        equal(int(text(group, "p:NbOfTxs")), len(transactions), "group count")
+        total = sum((Decimal(text(tx, "p:Amt/p:InstdAmt")) for tx in transactions), Decimal(0))
+        equal(Decimal(text(group, "p:CtrlSum")), total, "group total")
+        for tx in transactions:
+            ref = text(tx, "p:PmtId/p:EndToEndId")
+            require(ref not in actual, "Duplicate output reference")
+            actual[ref] = (tx, group)
+    equal(len(actual), expected["payments"], "transaction count")
+    equal(int(text(root, ".//p:GrpHdr/p:NbOfTxs")), expected["payments"], "message count")
+    if len(expected["totals"]) == 1:
+        equal(Decimal(text(root, ".//p:GrpHdr/p:CtrlSum")), Decimal(next(iter(expected["totals"].values()))), "message total")
+    else:
+        equal(text(root, ".//p:GrpHdr/p:CtrlSum"), "", "mixed-currency message sum omitted")
+    header = current = None
+    invoice_index = 0
+    source_groups = set()
+    with path.open(encoding="utf-8-sig", newline="") as stream:
+        for row in csv.reader(stream, strict=True):
+            if row[0] == "PH":
+                header = row
+            elif row[0] == "TX":
+                current, group = actual[row[2]]
+                invoice_index = 0
+                source_groups.add((header[1], row[7]))
+                equal(text(root, ".//p:GrpHdr/p:InitgPty/p:Nm"), header[2], "initiating party")
+                for query, value in (("p:Dbtr/p:Nm", header[3]), ("p:DbtrAcct/p:Id/p:IBAN", header[4]),
+                                     ("p:DbtrAgt/p:FinInstnId/p:BICFI", header[5]), ("p:ReqdExctnDt/p:Dt", header[6])):
+                    equal(text(group, query), value, query)
+                for query, value in (("p:Cdtr/p:Nm", row[3]), ("p:CdtrAcct/p:Id/p:IBAN", row[4]),
+                                     ("p:CdtrAgt/p:FinInstnId/p:BICFI", row[5]), ("p:RmtInf/p:Ustrd", row[8])):
+                    equal(text(current, query), value, query)
+                instructed = current.find("p:Amt/p:InstdAmt", ns)
+                equal(Decimal(instructed.text), Decimal(row[6]), "instructed amount")
+                equal(instructed.attrib["Ccy"], row[7], "instructed currency")
+            elif row[0] == "IN":
+                invoices = current.findall("p:RmtInf/p:Strd", ns)
+                require(invoice_index < len(invoices), "Missing invoice")
+                invoice = invoices[invoice_index]
+                invoice_index += 1
+                equal(text(invoice, "p:RfrdDocInf/p:Nb"), row[2], "invoice ID")
+                equal(text(invoice, "p:RfrdDocInf/p:RltdDt"), row[3], "invoice date")
+                amount = invoice.find("p:RfrdDocAmt/p:RmtdAmt", ns)
+                require(amount is not None, "Missing invoice amount")
+                equal(Decimal(amount.text), Decimal(row[4]), "invoice amount")
+                equal(amount.attrib["Ccy"], row[5], "invoice currency")
+            elif row[0] == "FX":
+                equal(text(current, "p:XchgRateInf/p:UnitCcy"), row[2], "FX unit currency")
+                equal(Decimal(text(current, "p:XchgRateInf/p:XchgRate")), Decimal(row[5]), "FX rate")
+                equal(text(current, "p:XchgRateInf/p:CtrctId"), row[6], "FX contract")
+                equal(text(current, "p:XchgRateInf/p:RateTp"), "", "no invented rate type")
+    equal(len(groups), len(source_groups), "source batch/currency groups")
+    equal(len(root.findall(".//p:CdtTrfTxInf/p:RmtInf/p:Strd", ns)), expected["invoices"], "invoice count")
+    equal(len(root.findall(".//p:CdtTrfTxInf/p:XchgRateInf", ns)), expected["exchanges"], "FX count")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--java", default=str(Path(os.environ["JAVA_HOME"]) / "bin/java") if "JAVA_HOME" in os.environ else "java")
@@ -98,6 +164,11 @@ def main():
         for expected in json.loads((HERE / "expected.json").read_text()):
             path = HERE / expected["name"]
             sample = {"file": path.name, "fixture_check": "valid for documented mock layout", **inspect_fixture(path, expected), "converter_attempts": []}
+            output = temporary / f"{path.stem}-selected.xml"
+            result = subprocess.run([args.java, "-jar", str(args.jar.resolve()), str(path), "--profile", "mock-multirecord-v1", "--output", str(output)], cwd=temporary, capture_output=True, text=True, timeout=20)
+            require(result.returncode == 0 and not result.stdout and not result.stderr and output.exists(), f"Selected-profile conversion failed: {result.stderr}")
+            inspect_xml(path, output.read_text(), expected)
+            sample["selected_profile"] = {"profile": "mock-multirecord-v1", "exit_code": result.returncode, "mapping_check": "payments, groups, invoices, FX and exact totals preserved"}
             for layout in ("default", "camel-case"):
                 output = temporary / f"{path.stem}-{layout}.xml"
                 result = subprocess.run([args.java, "-jar", str(args.jar.resolve()), str(path), "--layout", layout, "--output", str(output)], cwd=temporary, capture_output=True, text=True, timeout=20)
@@ -106,7 +177,7 @@ def main():
                 require("missing required columns" in result.stderr, "Unexpected rejection reason: " + result.stderr)
             require(hashlib.sha256(path.read_bytes()).hexdigest() == sample["sha256"], "Input was modified")
             report["samples"].append(sample)
-    report["conversion_result"] = "Unsupported: all six multi-record files rejected by both existing layouts; no XML created"
+    report["conversion_result"] = "All six files converted with mock-multirecord-v1; mappings verified; both flat layouts reject them without output"
     destination = PROJECT / "target/multirecord-test-results.json"
     destination.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
     print("Fixture checks: 6/6 valid for the documented mock layout.")

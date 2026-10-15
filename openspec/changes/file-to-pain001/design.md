@@ -1,10 +1,10 @@
 ## Context
 
-The workspace contains an earlier webMethods CSV-to-XML proof of concept and the implemented `file-to-pain001/` Java 21/JAXB 4 library with its bundled pain.001 schema. The library currently accepts two flat CSV layouts. Six synthetic PH/TX/IN/FX multi-record CSVs have been generated and tested: they satisfy their documented mock contract but are rejected by both existing flat layouts. The next extension adds explicit input profiles and a second structural handler. The old four-column CSV is not a suitable payment model. Retain Java 21/JAXB 4 as the user-selected baseline.
+The workspace contains an earlier webMethods CSV-to-XML proof of concept and the implemented `file-to-pain001/` Java 21/JAXB 4 library with its bundled pain.001 schema. The library accepts two flat CSV layouts and the explicit mock multi-record profile. Six core PH/TX/IN/FX samples now convert with `mock-multirecord-v1` and remain rejected by the flat layouts; the profile extension adds shared payment rules and a second structural handler. The old four-column CSV is not a suitable payment model. Retain Java 21/JAXB 4 as the user-selected baseline.
 
 The user selected direct population of Java classes generated from a pain.001 XSD. Java owns source mapping and XML serialization. The primary use is a direct call from a webMethods Java service into our compiled library JAR, taking an input path and returning XML. The Maven/CLI runner is a local development tool. No bank submission destination has been specified.
 
-This document records the implementation contract, including the planned profile/multi-record extension. Completed baseline work and pending extension work are distinguished in `tasks.md`; historical implementation evidence remains in the project's `docs/verification.md`. Updating this contract does not certify that the extension is implemented.
+This document records the implementation contract, including the implemented profile/multi-record extension. Baseline work and extension work are distinguished in `tasks.md`; historical implementation evidence remains in the project's `docs/verification.md`. Actual extension verification is recorded separately from the original baseline evidence.
 
 ## Goals / Non-Goals
 
@@ -26,36 +26,45 @@ Java 17 with JAXB 4 is a fallback only if the actual target server requires it. 
 
 ### 2. One Maven module with a reusable core
 
-Proposed layout:
+Implemented layout:
 
 ```text
 file-to-pain001/
   pom.xml
   README.md
-  docs/webmethods-integration.md
+  docs/
+    input-profiles.md
+    verification.md
+    webmethods-integration.md
   .gitignore
   src/main/java/com/example/payments/
     cli/PaymentFileRunner.java
     conversion/PaymentFileConverter.java
     conversion/PaymentDocumentAssembler.java
+    conversion/MultiRecordPaymentAssembler.java
+    conversion/PaymentConversionException.java
     input/PaymentFileHandler.java
+    input/PaymentFields.java
     input/PaymentInputProfile.java
     input/PaymentProfileRegistry.java
     input/csv/CsvPaymentFileHandler.java
     input/csv/CsvLayout.java
+    input/csv/CsvInput.java
     input/csv/MultiRecordCsvPaymentFileHandler.java
     xml/Pain001XmlWriter.java
   src/main/resources/xsd/
     pain.001.001.09.xsd
     README.md
   src/test/java/com/example/payments/
-  src/test/resources/expected/
   samples/csv/
     README.md
     valid/
     invalid/
     multirecord/
-  target/generated-sources/jaxb/   # generated; ignored
+  examples/webmethods/PaymentFileServices.java
+  openspec/                       # requirements and design history
+  target/                         # build output; ignored
+    generated-sources/jaxb/        # generated model
 ```
 
 Retain the small `PaymentFileHandler` interface accepting a `Path` and returning the generated pain.001 `Document`. `PaymentFileConverter` resolves the selected profile through a small registry and invokes its handler. `Pain001XmlWriter` serializes and validates the result. The public core accepts normal Java values, contains no webMethods dependencies, and does not terminate the process.
@@ -74,13 +83,15 @@ A profile identifies a versioned client input contract, not just a filename exte
 
 Profiles own explicit header/position mappings, required fields, accepted extensions, strict date/number conventions, and grouping policy. Initially all three accept `.csv`, ISO dates, and dot-decimal amounts. A new client sharing a structure reuses its handler with a new profile when its explicit mapping differs. Structurally different files get a different handler. The extension does not add speculative client profiles or alternate date formats without a concrete contract and fixtures. Never infer a profile from `.csv` or retry other handlers after validation fails.
 
-The flat handler owns header lookup and row parsing. The multi-record handler owns the current PH/TX state, row ownership, declared counts, and invoice/FX reconciliation. Their mapping can remain internal; do not add separate parser/mapper interfaces that only forward calls. Introduce such a seam when parsing or mapping has a real independent variation.
+The flat handler owns header lookup and row parsing. The multi-record handler owns CSV record tags, per-type widths and required-column checks. It passes source records to `MultiRecordPaymentAssembler` in the conversion package, which owns PH/TX state, parent-child ownership, declared counts, invoice/FX mapping and reconciliation. `CsvInput` shares transport, BOM handling and sanitized parser diagnostics; `PaymentFields` carries source context and common value validation. Keep concrete assemblers rather than adding parser/mapper interfaces that only forward calls.
 
 Extract `PaymentDocumentAssembler` and small shared value-validation helpers from the current flat handler. Both handlers use that implementation for common payment rules, duplicate references across the entire file, party consistency, generated IDs, injected clock, grouping, actual counts, and exact totals. Pass generated payment objects and minimal source/group context internally; do not create a parallel canonical payment hierarchy. The handler still returns a complete generated `Document` through the existing interface. Source record/type/field context must survive shared validation so diagnostics remain useful and sanitized.
 
 The registry and profile definitions may be reused if immutable. Each conversion must create fresh parsers, handler state, assembler state, generated objects, and marshaller. Different profiles must remain safe to process concurrently through the same converter.
 
-Package a normal library JAR and a runtime dependency directory/distribution for webMethods, plus an executable dependency-inclusive `runner` classifier JAR for local use. Preserve JAXB service-provider resources in the runner. Document application/dependency placement in the Integration Server package and Designer compile classpath, checking package/server dependency conflicts before deployment. Do not package webMethods platform classes in our library. The Java service invokes an ordinary Java method inside the Integration Server JVM; it does not launch `java -jar`, invoke `main`, capture stdout, or start a subprocess.
+Both Shade executions inherit one common configuration for dependency inclusion, signature/module exclusions, JAXB service-provider resources and license/notice merging. Execution-specific configuration retains the classifier and manifest: only the runner declares a CLI Main-Class; both retain multi-release metadata.
+
+Package a dependency-inclusive `webmethods` classifier library as the preferred single-JAR server deployment, an optional normal thin library with a runtime dependency directory, and a separate executable dependency-inclusive `runner` classifier JAR for local use. The webMethods fat JAR includes the application, generated model, schema and complete runtime dependency set, merges JAXB service-provider metadata, excludes vendor platform classes and has no CLI Main-Class. Migration removes the old thin application/dependency copies from this package classpath before reloading; do not mix both distributions. Preserve JAXB service-provider resources in both fat artifacts. A fat JAR does not override parent-first server class-loading precedence. Document application/dependency placement in the Integration Server package and Designer compile classpath, checking package/server dependency conflicts before deployment. Do not package webMethods platform classes in our library. The Java service invokes an ordinary Java method inside the Integration Server JVM; it does not launch `java -jar`, invoke `main`, capture stdout, or start a subprocess.
 
 ### 2b. Primary webMethods integration contract
 
@@ -200,7 +211,7 @@ Fresh message IDs do not provide duplicate-payment protection. Reprocessing a fi
 
 ### 6. Runner and output contract
 
-Commands, run from the Maven project directory (profile commands become available after extension implementation):
+Commands, run from the Maven project directory:
 
 ```sh
 mvn clean verify
@@ -259,7 +270,7 @@ Multi-record acceptance fixtures, all using `mock-multirecord-v1`:
 
 Add focused cases for two PH batches with identical common grouping values, mixed currencies within a PH, and every record ordering/ownership/count/invoice/FX failure rule. Assert exact mapping paths and values rather than only XSD validity, both through the library and packaged runner. Retain every existing flat regression case, legacy layout call, path-only call, wrong-profile rejection, source immutability, and all-or-nothing output protection. Exercise concurrent flat and multi-record calls on one converter instance.
 
-Before implementation, the existing sample checker documents unsupported conversion under flat profiles. After implementation, update it and fixture guides to expect successful explicit multi-record conversion and field preservation while retaining wrong-profile rejection checks. Historical rejection evidence must not be presented as proof that support was implemented. Record the new `mvn clean verify` result only after running it against the implementation.
+The sample checker now verifies successful explicit multi-record conversion and field preservation while retaining wrong-profile rejection checks. Historical flat-profile rejection evidence is separate from implemented support. The extension clean build passed 205 tests; see `docs/verification.md` for the command, environment and scope.
 
 ## Risks / Trade-offs
 

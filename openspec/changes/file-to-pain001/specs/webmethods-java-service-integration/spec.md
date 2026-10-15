@@ -38,8 +38,12 @@ The adapter example SHALL validate its required pipeline input, remove any previ
 - **THEN** the service reports failure, leaves no previous or partial XML result, and releases its cursor
 
 ### Requirement: Deployment guidance identifies runtime dependencies
-The project SHALL supply a thin Java service example and instructions for adding our library and compatible JAXB 4/runtime dependencies to the intended Integration Server package and Designer classpath. It SHALL identify Java 21 as the selected runtime and explain dependency/classloader checks. It SHALL keep webMethods platform classes out of the core JAR and distinguish local API verification from live server verification.
+The project SHALL supply a thin Java service example and instructions for adding only the dependency-inclusive `-webmethods.jar` library to the intended Integration Server package and Designer classpath. Guidance SHALL explain migration from the optional thin library plus separate dependencies, avoiding duplicate distributions in the package and reloading its classloader. It SHALL identify Java 21 as the selected runtime, explain that a fat JAR does not override server class-loading precedence, keep vendor platform classes out of the distributed JARs, and distinguish local API verification from live server verification. Unexpected runtime/linkage failures SHALL preserve their underlying cause in `ServiceException` without appending arbitrary runtime error values to the public diagnostic.
 
 #### Scenario: Integration handoff
 - **WHEN** a developer follows the integration guide
 - **THEN** they can identify the facade call, pipeline fields, application/dependency artifacts, server JVM requirement, and checks still requiring the intended server
+
+#### Scenario: Single deployment JAR is used with the vendor API
+- **WHEN** the adapter is compiled and invoked locally with only the webMethods fat library and installed vendor API visible
+- **THEN** default flat and explicitly selected multi-record conversion succeed without separate dependency JARs

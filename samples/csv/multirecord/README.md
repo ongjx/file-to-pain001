@@ -45,35 +45,63 @@ need no rounding. Totals are separate per currency. There is no trailer record.
 | [05-quoted-unicode.csv](05-quoted-unicode.csv) | 1 | 1 | 1 / 0 | GBP 10.25; comma, escaped quotes, Unicode and multiline text |
 | [06-bom-crlf.csv](06-bom-crlf.csv) | 1 | 1 | 1 / 1 | USD 62.50; actual UTF-8 BOM and CRLF bytes |
 
-## Compatibility test
+## Conversion and mapping
 
-**The existing converter does not support this layout.** Both `default` and
-`camel-case` expect a column-header row and one complete payment per data row.
-They interpret PH as a header row and reject these files for missing required
-columns (exit status 4). No XML is produced. That rejection does not validate or
-process invoice/FX details.
+Select `mock-multirecord-v1` explicitly. The default and camel-case flat profiles
+still reject these headerless files with status 4 and no output. PH/TX/IN/FX codes
+are defined by this mock contract, not inferred from arbitrary client CSVs.
 
-`check_samples.py` independently checks CSV record widths, required values,
-batch/payment ownership, unique references, dates, positive decimals, declared
-counts, invoice reconciliation, FX arithmetic and expected per-currency totals.
-This limited fixture check is not a bank validator or a payment converter.
-It probes both existing layouts for all six files, verifies rejections leave no
-output, and runs the existing flat basic.csv as a positive control. Actual exit
-codes and diagnostics are recorded; expected rejection is reported as unsupported
-conversion, not successful conversion.
+```sh
+java -jar target/file-to-pain001-1.0.0-SNAPSHOT-runner.jar samples/csv/multirecord/04-fx-and-invoices.csv --profile mock-multirecord-v1
+```
 
-From the project directory, after building the runner:
+Each IN becomes one `RmtInf/Strd` entry with its invoice ID, date, amount and
+currency. Nonblank TX remittance remains in `RmtInf/Ustrd`. FX rate direction is
+target-currency units per one source-currency unit; source currency, rate and
+contract map to `XchgRateInf/UnitCcy`, `XchgRate` and `CtrctId`. TX retains the
+instructed target amount. FX source amount is reconciliation-only and is
+recoverable from instructed amount/rate; it is not emitted as a second payment
+amount. No rate type is invented. PH batch IDs control grouping, while output
+payment-group IDs are generated. Different batches remain separate; mixed
+currencies within a batch split into separate groups. IN/FX never add payment
+counts or control sums.
+
+## Additional focused fixtures
+
+| File | Expected behavior |
+| --- | --- |
+| [valid/separate-batches.csv](valid/separate-batches.csv) | Two PH batches with the same debtor/date/currency stay as two groups; USD 250.00 total |
+| [valid/mixed-batch.csv](valid/mixed-batch.csv) | One PH with three TX splits into USD 250.00 and GBP 125.00; noncontiguous USD payments retain order |
+| [valid/interleaved-details.csv](valid/interleaved-details.csv) | FX before invoices, multiple invoices, and the same invoice ID on different TX are supported; USD 250.00 total |
+
+The 47 focused invalid fixtures are enumerated with expected diagnostic fragments
+in [invalid/expected.tsv](invalid/expected.tsv). They cover unknown tags, widths,
+ordering/ownership, EOF and next-PH counts, empty batches/files, duplicate
+identifiers/details, invoice reconciliation/date/amount, FX arithmetic/currencies/
+rate limits, required/common payment values, party consistency, malformed quoting,
+XML characters and aggregate XSD constraints. Java tests exercise every case
+through both the facade and the packaged runner and check no partial output.
+
+## Verification
+
+`check_samples.py` independently checks the six core samples' record widths,
+required values, ownership, references, dates, positive decimals, declared counts,
+invoice reconciliation, FX arithmetic and documented per-currency totals. It then
+converts each with `mock-multirecord-v1` and compares payment/header values,
+structured invoice fields, exchange details, counts, groups and exact sums in XML.
+It retains wrong-profile rejection checks for both flat layouts, input immutability
+checks and the flat basic.csv positive control. This fixture checker is not a
+bank validator. Independent XSD validation is performed by the Java test suite.
+
+From the project directory:
 
 ```sh
 export JAVA_HOME="$HOME/Library/Java/JavaVirtualMachines/file-to-pain001-temurin-21.jdk/Contents/Home"
 export PATH="$JAVA_HOME/bin:$PATH"
-mvn verify
+mvn clean verify
 python3 samples/csv/multirecord/check_samples.py
 ```
 
-Results are saved to `target/multirecord-test-results.json`. An assertion fails
-if checked mock rules fail, the positive control fails, or converter behavior
-differs from its current rejection contract. Update the check when multi-record
-support is implemented. Proper support needs a record parser and explicit
-mappings for batch, invoice and FX information into pain.001; dropping detail
-rows would lose source information.
+The checker saves actual results to `target/multirecord-test-results.json`. It fails
+if a core sample does not convert with its selected profile, its mapped fields or
+totals disagree, a wrong profile emits output, or an input is modified.

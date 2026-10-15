@@ -15,7 +15,7 @@ The Maven build SHALL generate and compile Java classes from the bundled XSD dur
 - **THEN** XJC generates Java classes in `target/generated-sources/jaxb`, they compile, and the application JAR contains the generated classes
 
 ### Requirement: XML is serialized and schema validated
-The XML writer SHALL serialize generated model instances as UTF-8 pain.001 XML in the chosen namespace and validate them against the bundled XSD. Runtime schema access SHALL be local, with external DTD and schema retrieval disabled.
+The XML writer SHALL serialize generated model instances as UTF-8 pain.001 XML in the chosen namespace and validate them against the bundled XSD. It SHALL select the Java runtime's built-in schema validator directly so an incompatible host JAXP provider cannot prevent schema initialization. Runtime schema access SHALL be local, with secure processing enabled and external DTD and schema retrieval disabled. It SHALL NOT change server-wide provider settings or bypass validation when an ambient provider rejects security properties.
 
 #### Scenario: Valid object produces conforming XML
 - **WHEN** a supported, complete payment document is serialized
@@ -28,3 +28,7 @@ The XML writer SHALL serialize generated model instances as UTF-8 pain.001 XML i
 #### Scenario: Packaged runtime has no schema network access
 - **WHEN** the runner executes outside the source directory without network access, with dependencies already packaged
 - **THEN** it resolves the bundled schema and produces validated XML without downloading schema resources
+
+#### Scenario: Host registers an older schema factory
+- **WHEN** the host's ambient JAXP schema provider rejects the external-access security properties
+- **THEN** conversion uses the built-in Java validator, succeeds for valid input, still rejects XSD-invalid output, and leaves host provider settings unchanged

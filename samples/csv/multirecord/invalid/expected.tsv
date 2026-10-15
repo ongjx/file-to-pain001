@@ -1,0 +1,47 @@
+unknown-type.csv	record_type
+wrong-width.csv	field count
+tx-before-ph.csv	preceding PH
+invoice-before-tx.csv	preceding TX
+fx-before-tx.csv	preceding TX
+wrong-tx-batch.csv	batch_id
+wrong-invoice-owner.csv	end_to_end_id
+wrong-fx-owner.csv	end_to_end_id
+eof-count.csv	transaction_count
+next-ph-count.csv	transaction_count
+empty-batch.csv	transaction_count
+zero-count.csv	transaction_count
+invalid-count.csv	transaction_count
+duplicate-batch.csv	duplicate batch
+duplicate-payment.csv	duplicate reference
+duplicate-cross-batch-payment.csv	duplicate reference
+duplicate-invoice.csv	duplicate invoice
+duplicate-fx.csv	duplicate FX
+invoice-sum.csv	invoice amounts
+invoice-currency.csv	invoice currency
+invoice-date.csv	invoice_date
+invoice-amount.csv	invoice_amount
+invoice-id-length.csv	invoice_id
+fx-target.csv	target_currency
+fx-same-currency.csv	target_currency
+fx-source-currency.csv	source_currency
+fx-arithmetic.csv	source_amount
+fx-source-zero.csv	source_amount
+fx-rate-zero.csv	exchange_rate
+fx-rate-exponent.csv	exchange_rate
+fx-rate-fraction.csv	exchange_rate
+fx-rate-digits.csv	exchange_rate
+fx-contract-length.csv	contract_id
+blank-required.csv	creditor_name
+invalid-amount.csv	amount
+invalid-date.csv	execution_date
+invalid-iban.csv	creditor_iban
+invalid-bic.csv	creditor_bic
+invalid-currency.csv	currency
+inconsistent-party.csv	initiating_party_name
+inconsistent-debtor.csv	debtor_iban
+empty-file.csv	no payments
+details-after-new-ph.csv	preceding TX
+detail-backreference.csv	end_to_end_id
+xml-character.csv	XML 1.0
+schema-total.csv	schema validation failed
+malformed.csv	Malformed CSV

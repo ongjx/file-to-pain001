@@ -3,6 +3,7 @@ package com.example.payments.cli;
 import com.example.payments.conversion.PaymentConversionException;
 import com.example.payments.conversion.PaymentFileConverter;
 import com.example.payments.input.csv.CsvLayout;
+import com.example.payments.input.PaymentProfileRegistry;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -26,7 +27,7 @@ public final class PaymentFileRunner {
         try {
             Options options = options(args);
             PaymentFileConverter converter = new PaymentFileConverter();
-            String xml = converter.toXml(converter.convert(options.input(), options.layout()));
+            String xml = converter.toXml(converter.convert(options.input(), options.profile()));
             try {
                 if (options.output() == null) {
                     System.out.write(xml.getBytes(StandardCharsets.UTF_8));
@@ -45,7 +46,7 @@ public final class PaymentFileRunner {
         } catch (PaymentConversionException e) {
             System.err.println(e.getMessage());
             if (e.kind() == PaymentConversionException.Kind.USAGE) {
-                System.err.println("Usage: <input.csv> [--layout default|camel-case] [--output new-file.xml]");
+                System.err.println("Usage: <input.csv> [--profile flat-default-v1|flat-camel-case-v1|mock-multirecord-v1 | --layout default|camel-case] [--output new-file.xml]");
             }
             return switch (e.kind()) {
                 case USAGE -> 2;
@@ -67,20 +68,25 @@ public final class PaymentFileRunner {
             throw usage();
         }
         Path input = Path.of(args[0]);
-        CsvLayout layout = CsvLayout.DEFAULT;
+        String profile = PaymentProfileRegistry.DEFAULT;
         Path output = null;
-        boolean layoutSeen = false;
+        boolean selectorSeen = false;
         for (int i = 1; i < args.length; i += 2) {
             if (args[i + 1].isBlank() || args[i + 1].startsWith("--")) {
                 throw usage();
             }
             switch (args[i]) {
                 case "--layout" -> {
-                    if (layoutSeen) {
+                    if (selectorSeen) {
                         throw usage();
                     }
-                    layout = CsvLayout.fromOption(args[i + 1]);
-                    layoutSeen = true;
+                    profile = CsvLayout.fromOption(args[i + 1]) == CsvLayout.DEFAULT ? "flat-default-v1" : "flat-camel-case-v1";
+                    selectorSeen = true;
+                }
+                case "--profile" -> {
+                    if (selectorSeen) throw usage();
+                    profile = PaymentProfileRegistry.resolve(args[i + 1]).id();
+                    selectorSeen = true;
                 }
                 case "--output" -> {
                     if (output != null) {
@@ -91,7 +97,7 @@ public final class PaymentFileRunner {
                 default -> throw usage();
             }
         }
-        return new Options(input, layout, output);
+        return new Options(input, profile, output);
     }
 
     private static void writeNew(Path path, String xml) throws IOException {
@@ -113,5 +119,5 @@ public final class PaymentFileRunner {
         return new PaymentConversionException(PaymentConversionException.Kind.USAGE, "Expected one input path and supported option/value pairs.");
     }
 
-    private record Options(Path input, CsvLayout layout, Path output) { }
+    private record Options(Path input, String profile, Path output) { }
 }

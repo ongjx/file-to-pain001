@@ -38,7 +38,9 @@ public final class Pain001XmlWriter {
                 throw new IllegalStateException("Bundled pain.001 schema is missing.");
             }
             try {
-                SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+                // Host servers can register older Xerces providers that lack JAXP security properties.
+                // Select the Java runtime's provider without changing host-wide JAXP configuration.
+                SchemaFactory factory = SchemaFactory.newDefaultInstance();
                 factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
                 factory.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
                 factory.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");

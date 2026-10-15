@@ -49,6 +49,66 @@ class PaymentFileRunnerIT {
         assertFalse(Files.exists(output));
     }
 
+    @ParameterizedTest(name = "packaged multi-record: {0}")
+    @MethodSource("com.example.payments.MultiRecordPaymentTest#valid")
+    void packagedMultiRecordPreservesSourceValues(Path fixture) throws Exception {
+        Result result = run(fixture.toAbsolutePath().toString(), "--profile", MultiRecordPaymentTest.PROFILE);
+        assertEquals(0, result.status(), result.err());
+        assertEquals("", result.err());
+        assertTrue(result.out().startsWith("<?xml"));
+        MultiRecordAssertions.assertFixture(fixture, result.out());
+    }
+
+    @ParameterizedTest(name = "packaged multi-record rejection: {0}")
+    @MethodSource("com.example.payments.MultiRecordPaymentTest#invalid")
+    void packagedMultiRecordFailuresLeaveNoOutput(Path fixture, String reason) throws Exception {
+        byte[] original = Files.readAllBytes(fixture);
+        Path output = temporary.resolve("must-not-exist.xml");
+        Result result = run(fixture.toAbsolutePath().toString(), "--profile", MultiRecordPaymentTest.PROFILE,
+                "--output", output.toString());
+        assertEquals(4, result.status(), result.err());
+        assertEquals("", result.out());
+        assertTrue(result.err().contains(reason), result.err());
+        assertFalse(Files.exists(output));
+        assertArrayEquals(original, Files.readAllBytes(fixture));
+    }
+
+    @Test
+    void explicitProfilesAndLegacySelectorsHaveClearBehavior() throws Exception {
+        String basic = PROJECT.resolve("samples/csv/valid/basic.csv").toString();
+        for (String profile : List.of("default", "flat-default-v1")) {
+            assertEquals(0, run(basic, "--profile", profile).status());
+        }
+        String camel = PROJECT.resolve("samples/csv/valid/alternate-headers.csv").toString();
+        assertEquals(0, run(camel, "--profile", "flat-camel-case-v1").status());
+        for (String[] options : List.of(
+                new String[]{"--profile", "unknown"}, new String[]{"--profile", ""},
+                new String[]{"--profile", " "}, new String[]{"--profile", "flat-default-v1", "--profile", "flat-default-v1"},
+                new String[]{"--profile", "flat-default-v1", "--layout", "default"},
+                new String[]{"--layout", "default", "--profile", "flat-default-v1"})) {
+            List<String> args = new ArrayList<>(List.of(basic));
+            args.addAll(List.of(options));
+            args.addAll(List.of("--output", temporary.resolve("invalid-options.xml").toString()));
+            Result result = run(args.toArray(String[]::new));
+            assertEquals(2, result.status(), result.err());
+            assertEquals("", result.out());
+            assertFalse(Files.exists(temporary.resolve("invalid-options.xml")));
+        }
+        assertEquals(4, run(basic, "--profile", MultiRecordPaymentTest.PROFILE).status());
+        assertEquals(3, run("missing.csv", "--profile", MultiRecordPaymentTest.PROFILE).status());
+        assertEquals(2, run("data.xlsx", "--profile", MultiRecordPaymentTest.PROFILE).status());
+        Path multi = PROJECT.resolve("samples/csv/multirecord/04-fx-and-invoices.csv");
+        for (String layout : List.of("default", "camel-case")) assertEquals(4, run(multi.toString(), "--layout", layout).status());
+        Path output = temporary.resolve("multi.xml");
+        Result first = run(multi.toString(), "--profile", MultiRecordPaymentTest.PROFILE, "--output", output.toString());
+        assertEquals(0, first.status(), first.err());
+        assertEquals("", first.out());
+        String xml = Files.readString(output);
+        MultiRecordAssertions.assertFixture(multi, xml);
+        assertEquals(5, run(multi.toString(), "--profile", MultiRecordPaymentTest.PROFILE, "--output", output.toString()).status());
+        assertEquals(xml, Files.readString(output));
+    }
+
     @Test
     void outputIsCreatedWithoutChangingInputOrOverwritingExistingFile() throws Exception {
         Path input = PROJECT.resolve("samples/csv/valid/basic.csv");

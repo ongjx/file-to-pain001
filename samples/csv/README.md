@@ -2,7 +2,7 @@
 
 All files here are mock data for conversion tests. Party names and payment references are fictitious. `GB00MOCK...` and `DE00MOCK...` identifiers are deliberately synthetic: they satisfy the prototype's lexical/XSD profile, but are not verified IBANs or real payment destinations. Do not submit these files as payments.
 
-Six additional [multi-record examples](multirecord/README.md) use a documented mock PH/TX/IN/FX layout. They are separate compatibility probes: the current converter rejects that layout and produces no XML.
+Six core [multi-record examples](multirecord/README.md), plus focused valid/invalid cases, use the documented mock PH/TX/IN/FX layout. Select `--profile mock-multirecord-v1` to convert them; flat profiles reject this different contract.
 
 ## Columns (supported flat layouts)
 
