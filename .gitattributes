@@ -1,0 +1,3 @@
+# Preserve the official schema checksum and the deliberate BOM/CRLF test fixture.
+/src/main/resources/xsd/*.xsd -text whitespace=cr-at-eol
+/samples/csv/**/*bom-crlf.csv -text whitespace=cr-at-eol

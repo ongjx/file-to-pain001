@@ -1,0 +1,66 @@
+[
+  {
+    "name": "01-single-payment.csv",
+    "batches": 1,
+    "payments": 1,
+    "invoices": 0,
+    "exchanges": 0,
+    "totals": {
+      "GBP": "125.50"
+    }
+  },
+  {
+    "name": "02-invoices.csv",
+    "batches": 1,
+    "payments": 2,
+    "invoices": 3,
+    "exchanges": 0,
+    "totals": {
+      "GBP": "450.00"
+    }
+  },
+  {
+    "name": "03-multiple-batches.csv",
+    "batches": 2,
+    "payments": 3,
+    "invoices": 0,
+    "exchanges": 0,
+    "totals": {
+      "GBP": "300.00",
+      "EUR": "75.25"
+    }
+  },
+  {
+    "name": "04-fx-and-invoices.csv",
+    "batches": 1,
+    "payments": 2,
+    "invoices": 2,
+    "exchanges": 2,
+    "totals": {
+      "USD": "125.00",
+      "EUR": "90.00"
+    }
+  },
+  {
+    "name": "05-quoted-unicode.csv",
+    "batches": 1,
+    "payments": 1,
+    "invoices": 1,
+    "exchanges": 0,
+    "totals": {
+      "GBP": "10.25"
+    }
+  },
+  {
+    "name": "06-bom-crlf.csv",
+    "batches": 1,
+    "payments": 1,
+    "invoices": 1,
+    "exchanges": 1,
+    "totals": {
+      "USD": "62.50"
+    },
+    "bom": true,
+    "crlf": true
+  }
+]

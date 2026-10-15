@@ -1,0 +1,3 @@
+remittance,currency,amount,creditor_bic,creditor_iban,creditor_name,end_to_end_id,execution_date,debtor_bic,debtor_iban,debtor_name,initiating_party_name
+Mock invoice A,GBP,0.10,MOCKGB2L,GB00MOCK00000000000002,Mock Supplier One,MOCK-001,2026-10-15,MOCKGB2L,GB00MOCK00000000000001,Mock Debtor One,Mock Treasury
+Mock invoice B,GBP,0.20,MOCKGB2L,GB00MOCK00000000000003,Mock Supplier Two,MOCK-002,2026-10-15,MOCKGB2L,GB00MOCK00000000000001,Mock Debtor One,Mock Treasury
